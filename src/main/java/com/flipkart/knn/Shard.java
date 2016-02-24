@@ -1,6 +1,5 @@
 package com.flipkart.knn;
 
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.opencsv.CSVReader;
 
 import java.io.FileReader;
@@ -42,10 +41,19 @@ public class Shard {
         for(Thread thread : threads) { thread.start(); }
         for(Thread thread : threads) { thread.join(); }
 
-        MinMaxPriorityQueue<ResultRecord> minGlobal = MinMaxPriorityQueue.orderedBy(new ResultRecord()).maximumSize(k).create();
+        PriorityQueue<ResultRecord> minGlobal = new PriorityQueue(k+2, ResultRecordComparator.INSTANCE);
         for (Worker worker: workers) {
             for(ResultRecord currRecord: worker.localMin) {
-                minGlobal.add(currRecord);
+                if (minGlobal.size() < k) {
+                    minGlobal.add(currRecord);
+                }
+                else {
+                    ResultRecord last = minGlobal.peek();
+                    if (last.distance > currRecord.distance) {
+                        minGlobal.poll();
+                        minGlobal.add(currRecord);
+                    }
+                }
             }
         }
 
@@ -108,7 +116,7 @@ public class Shard {
             this.flatIds = flatIds;
             this.query = query;
             this.k = k;
-            localMin = MinMaxPriorityQueue.orderedBy(new ResultRecord()).maximumSize(this.k).create();
+            localMin = new PriorityQueue(this.k+2, ResultRecordComparator.INSTANCE);
         }
 
         public void run() {
@@ -121,9 +129,10 @@ public class Shard {
                     localMin.add(currResultRecord);
                 }
                 else {
-                    ResultRecord last = localMin.peekLast();
+                    ResultRecord last = localMin.peek();
                     if (last.distance > currDistance) {
                         ResultRecord currResultRecord = new ResultRecord(currId, currDistance);
+                        localMin.poll();
                         localMin.add(currResultRecord);
                     }
                 }
@@ -149,7 +158,7 @@ public class Shard {
         private String[] flatIds;
         private float[] query;
         private double min;
-        public MinMaxPriorityQueue<ResultRecord> localMin;
+        public PriorityQueue<ResultRecord> localMin;
         public int k;
     }
 
