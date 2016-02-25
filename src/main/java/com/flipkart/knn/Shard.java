@@ -5,12 +5,18 @@ import com.opencsv.CSVReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Shard {
+    ExecutorService executorService;
 
     Shard(int threadCount, int embeddingSize) {
         this.threadCount = threadCount;
         this.embeddingSize = embeddingSize;
+        this.executorService = Executors.newWorkStealingPool(threadCount);
     }
 
     public void insert(String id, float[] embedding) {
@@ -21,25 +27,25 @@ public class Shard {
 
     public int getCountDataPoints() {return countDataPoints;}
 
-    public ArrayList<ResultRecord> knn(float[] query, int k) throws InterruptedException {
+    public ArrayList<ResultRecord> knn(float[] query, int k) throws InterruptedException, ExecutionException {
         int totalWorkload = ids.size();
         int workload = totalWorkload/ threadCount;
         int assignedWorkload = 0;
         ArrayList<Worker> workers = new ArrayList<Worker>();
-        ArrayList<Thread> threads = new ArrayList<Thread>();
+        ArrayList<Future> futures = new ArrayList<Future>();
         for(int i = 0; i < threadCount; i++) {
             int endpoint = assignedWorkload + workload;
             if (assignedWorkload + workload > totalWorkload)
                 endpoint = totalWorkload;
             Worker currWorker = new Worker(assignedWorkload, endpoint, flatEmbeddings, flatIds, query, k);
-            Thread currThread = new Thread(currWorker);
+            futures.add(executorService.submit(currWorker));
             workers.add(currWorker);
-            threads.add(currThread);
             assignedWorkload += workload;
         }
-
-        for(Thread thread : threads) { thread.start(); }
-        for(Thread thread : threads) { thread.join(); }
+        //block until all tasks are finished
+        for(Future future : futures) {
+            future.get();
+        }
 
         PriorityQueue<ResultRecord> minGlobal = new PriorityQueue(k+2, ResultRecordComparator.INSTANCE);
         for (Worker worker: workers) {
@@ -95,7 +101,7 @@ public class Shard {
         }
     }
 
-    public ArrayList<ResultRecord> loadTest(float[] embedding, int k) throws InterruptedException {
+    public ArrayList<ResultRecord> loadTest(float[] embedding, int k) throws InterruptedException, ExecutionException {
         return knn(embedding, k);
     }
 

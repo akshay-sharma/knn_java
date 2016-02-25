@@ -4,6 +4,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 public class KNN
 {
@@ -46,7 +47,7 @@ public class KNN
             System.out.println("P95:" + descriptiveStatistics.getPercentile(0.95));
 
         }
-        catch (IOException | InterruptedException e) {
+        catch (IOException | InterruptedException | ExecutionException e ) {
             System.out.println(e);
         }
     }

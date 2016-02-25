@@ -3,13 +3,14 @@ package com.flipkart.knn;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.*;
 
 public class ShardTest {
 
     @Test
-    public void testAll() throws InterruptedException{
+    public void testAll() throws InterruptedException, ExecutionException {
         int threads = 3;
         int vectorSize = 10;
         int dataPoints = 100;
