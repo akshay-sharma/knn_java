@@ -149,7 +149,7 @@ public class Shard {
                 float c = a - b;
                 total +=  c * c;
             }
-            return Math.sqrt(total);
+            return total;
         }
 
         private int start;
